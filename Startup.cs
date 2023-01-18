@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace ImageUploadApi
 {
-    public class Startup
+   public class Startup
     {
         public Startup(IConfiguration configuration)
         {

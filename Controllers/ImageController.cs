@@ -20,58 +20,67 @@ namespace ImageUploadApi.Controllers
             _environment = environment;
         }
 
-
+        //This endpoint redirects to Postman collection page for showing list of web APIs
         [HttpGet("Index")]
-        public string Index()
+        public void Index()
         {
-            return "Author: Nadia Tabassum!!";
+            Response.Redirect("https://documenter.getpostman.com/view/18525620/2s8ZDVZip9");
         }
+
 
         [HttpPost("UploadFile")]
         public async Task<ResponseDownload> UploadFile([FromBody] RequestDownload req)
         {
-            IDictionary<string, string> openWith = new Dictionary<string, string>();
-            string[] source = req.ImageUrls.ToArray();
-            int i = 0, j = 0;
+          
+            string[] ImageUrlList = req.ImageUrls.ToArray();
+            int i = 0, chunkIndex = 0;
             int chunkSize = req.MaxDownloadAtOnce;
-            string[][] imageChunks = source.GroupBy(s => i++ / chunkSize).Select(g => g.ToArray()).ToArray();
+            string[][] imageChunks = ImageUrlList.GroupBy(s => i++ / chunkSize).Select(g => g.ToArray()).ToArray();
+            IDictionary<string, string> urlAndNames = new Dictionary<string, string>();
 
 
             foreach (string[] imageChunk in imageChunks)
             {
                 var urlTasks = imageChunk.Select((url, index) =>
                 {
+                    Guid uniqueName = Guid.NewGuid();
                     WebClient wc = new WebClient();
-                    string path = string.Format("{0}image-{1}-{2}.jpg", "wwwroot/Images/", j, index);
+
+                    //adding chunkIndex and urlIndex inside the chunk to check the process
+                    string path = string.Format("{0}{1}-{2}-{3}.jpg", "wwwroot/Images/", uniqueName , chunkIndex, index);
                     var downloadTask = wc.DownloadFileTaskAsync(new Uri(url), path);
 
-                    openWith.Add(url + index + j, "image" + index);
+                    urlAndNames.Add(string.Format("{0}-{1}-{2}.jpg", uniqueName, chunkIndex, index), url);
 
                     return downloadTask;
                 });
 
-                Console.WriteLine("Starting chunk " + j);
+                Console.WriteLine("Starting chunk " + chunkIndex);
                 await Task.WhenAll(urlTasks);
-                Console.WriteLine("Completed chunk " + j);
-                j++;
+                Console.WriteLine("Completed chunk " + chunkIndex);
+                chunkIndex++;
             }
 
             return new ResponseDownload
             {
                 success = true,
-                message = "Nice try",
-                UrlAndNames = openWith
+                message = "Succesfully Downloaded and uploaded",
+                UrlAndNames = urlAndNames
             };
         }
 
 
 
         [HttpGet("get-image-by-name/{image_name}")]
-        public string GetImage()
+        public object GetImage()
         {
-            Byte[] b;
-            b = System.IO.File.ReadAllBytes(Path.Combine(_environment.ContentRootPath, "Images", $"{Request.RouteValues.Values.ToArray()[2]}"));
-            string base64ImageRepresentation = Convert.ToBase64String(b);
+            Byte[] byt;
+
+            //reading files from wwwroot/Images path
+            byt = System.IO.File.ReadAllBytes(Path.Combine(_environment.WebRootPath, "Images", $"{Request.RouteValues.Values.ToArray()[2]}"));
+            
+            //creating anonymus object for a better representation
+            var base64ImageRepresentation = new { base64String= Convert.ToBase64String(byt) };
             return base64ImageRepresentation;
         }
     }
