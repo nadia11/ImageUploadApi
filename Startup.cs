@@ -35,7 +35,7 @@ namespace ImageUploadApi
             {
                 app.UseDeveloperExceptionPage();
             }
-
+          
             app.UseHttpsRedirection();
 
             app.UseStaticFiles();
